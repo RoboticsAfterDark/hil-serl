@@ -54,3 +54,5 @@ Run Eval on whole dataset after training:
 # Accuracy: 97.2%, Avg loss: 0.1189
 python3 models/eval_classifier.py
 ```
+
+TODO(abhismirai42): add installation instruction using pyproject and uv
