@@ -49,4 +49,8 @@ Run success classifier:
 python3 models/train_classifier.py
 ```
 
-
+Run Eval on whole dataset after training:
+```
+# Accuracy: 97.2%, Avg loss: 0.1189
+python3 models/eval_classifier.py
+```

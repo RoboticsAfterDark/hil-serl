@@ -21,6 +21,8 @@ def load_data(data_dir, batch_size=10):
     """
 
     # TODO (schromya): Crop image to 224x224 to begin with?
+    # NOTTODO(abhismirai42): Croping image is distroying the information, resize is better right?
+    #                        Also we need to make sure that same croping/resizing applied while eval
     preprocess = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
@@ -32,7 +34,9 @@ def load_data(data_dir, batch_size=10):
     if len(dataset) < 2:
         raise ValueError("Need at least two images for a train/test split.")
 
-    train_size = int(0.8 * len(dataset))
+    # When using small dataset (datapoint = 100) split evenly would be better as to small
+    # testset or trainset might not be the good representative of the dataset
+    train_size = int(0.5 * len(dataset))
     test_size = len(dataset) - train_size
 
     training_data, test_data = random_split(
@@ -68,7 +72,7 @@ def train(dataloader, model, loss_fn, optimizer, device):
         optimizer.zero_grad()
 
         loss, current = loss.item(), min((batch + 1) * dataloader.batch_size, size)
-        print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+        # print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
 
 
 def test(dataloader, model, loss_fn, device):
@@ -94,6 +98,8 @@ if __name__ == "__main__":
     device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
 
     data_dir = Path(__file__).resolve().parents[1] / "data" / "classifier"
+    model_dir = Path(__file__).resolve().parents[1] / "models" / "classifier" / "binary_classifier.pth"
+    model_dir.parent.mkdir(parents=True, exist_ok=True)
 
     train_dataloader, test_dataloader = load_data(data_dir, batch_size)
 
@@ -101,7 +107,10 @@ if __name__ == "__main__":
     loss_fn = torch.nn.BCEWithLogitsLoss()
     optimizer = torch.optim.Adam(model.head.parameters(), lr=1e-4)
 
-    train(train_dataloader, model, loss_fn, optimizer, device)
-    test(test_dataloader, model, loss_fn, device)
+    epochs = 500
+    for i in range(epochs):
+        train(train_dataloader, model, loss_fn, optimizer, device)
+        test(test_dataloader, model, loss_fn, device)
 
-
+    torch.save(model.state_dict(), model_dir)
+    print(f"saved weights to {model_dir}")
