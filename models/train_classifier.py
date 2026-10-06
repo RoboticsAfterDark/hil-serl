@@ -23,6 +23,7 @@ def load_data(data_dir, batch_size=10):
     # TODO (schromya): Crop image to 224x224 to begin with?
     # NOTTODO(abhismirai42): Croping image is distroying the information, resize is better right?
     #                        Also we need to make sure that same croping/resizing applied while eval
+    # (schromya): I meant cropping smaller in data processing (data/prep_classifier_data)
     preprocess = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
@@ -55,6 +56,16 @@ def load_data(data_dir, batch_size=10):
 
 
 def train(dataloader, model, loss_fn, optimizer, device):
+    """
+    Train the model for one complete pass through the dataset.
+
+    Args:
+        dataloader: Batches of input images and binary labels.
+        model: Model being optimized.
+        loss_fn: Loss function used to compare predictions with labels.
+        optimizer: Optimizer used to update the model's trainable parameters.
+        device: Device where input tensors and the model are stored.
+    """
     size = len(dataloader.dataset)
     model.train()
     model.backbone.eval()  # Keep the frozen backbone's BatchNorm statistics fixed.
@@ -71,11 +82,22 @@ def train(dataloader, model, loss_fn, optimizer, device):
         optimizer.step()
         optimizer.zero_grad()
 
-        loss, current = loss.item(), min((batch + 1) * dataloader.batch_size, size)
-        # print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+        loss, _ = loss.item(), min((batch + 1) * dataloader.batch_size, size)
 
 
-def test(dataloader, model, loss_fn, device):
+def test(dataloader, model, loss_fn, device) -> tuple[float, float]:
+    """
+    Evaluate the model on one complete pass through the test dataset.
+
+    Args:
+        dataloader: Batches of input images and binary labels.
+        model: Model being evaluated.
+        loss_fn: Loss function used to compare predictions with labels.
+        device: Device where input tensors and the model are stored.
+
+    Returns:
+        A tuple of average (loss, accuracy), both as values from 0 to 1.
+    """
     size = len(dataloader.dataset)
     model.eval()
     test_loss, correct = 0, 0
@@ -90,7 +112,8 @@ def test(dataloader, model, loss_fn, device):
 
     test_loss /= size
     correct /= size
-    print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
+
+    return test_loss, correct
 
 
 if __name__ == "__main__":
@@ -107,10 +130,13 @@ if __name__ == "__main__":
     loss_fn = torch.nn.BCEWithLogitsLoss()
     optimizer = torch.optim.Adam(model.head.parameters(), lr=1e-4)
 
-    epochs = 500
+    epochs = 60
     for i in range(epochs):
         train(train_dataloader, model, loss_fn, optimizer, device)
-        test(test_dataloader, model, loss_fn, device)
+        loss, accuracy = test(test_dataloader, model, loss_fn, device)
+
+        if i % 20 == 0:
+            print(f"[Epoch {i}/{epochs}] Test Accuracy: {(100*accuracy):.1f}%, Avg loss: {loss:8f}")
 
     torch.save(model.state_dict(), model_dir)
-    print(f"saved weights to {model_dir}")
+    print(f"\nSaved weights to {model_dir}")
