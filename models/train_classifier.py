@@ -130,7 +130,7 @@ if __name__ == "__main__":
     loss_fn = torch.nn.BCEWithLogitsLoss()
     optimizer = torch.optim.Adam(model.head.parameters(), lr=1e-4)
 
-    epochs = 60
+    epochs = 500
     for i in range(epochs):
         train(train_dataloader, model, loss_fn, optimizer, device)
         loss, accuracy = test(test_dataloader, model, loss_fn, device)
