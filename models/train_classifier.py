@@ -55,7 +55,7 @@ def load_data(data_dir, batch_size=10):
     return train_dataloader, test_dataloader
 
 
-def train(dataloader, model, loss_fn, optimizer, device):
+def train(dataloader, model, loss_fn, optimizer, device) -> float:
     """
     Train the model for one complete pass through the dataset.
 
@@ -65,6 +65,8 @@ def train(dataloader, model, loss_fn, optimizer, device):
         loss_fn: Loss function used to compare predictions with labels.
         optimizer: Optimizer used to update the model's trainable parameters.
         device: Device where input tensors and the model are stored.
+    Returns:
+        Training loss of last batch.
     """
     size = len(dataloader.dataset)
     model.train()
@@ -83,7 +85,7 @@ def train(dataloader, model, loss_fn, optimizer, device):
         optimizer.zero_grad()
 
         loss, _ = loss.item(), min((batch + 1) * dataloader.batch_size, size)
-
+    return loss
 
 def test(dataloader, model, loss_fn, device) -> tuple[float, float]:
     """
@@ -130,13 +132,13 @@ if __name__ == "__main__":
     loss_fn = torch.nn.BCEWithLogitsLoss()
     optimizer = torch.optim.Adam(model.head.parameters(), lr=1e-4)
 
-    epochs = 500
+    epochs = 100
     for i in range(epochs):
-        train(train_dataloader, model, loss_fn, optimizer, device)
+        train_loss = train(train_dataloader, model, loss_fn, optimizer, device)
         loss, accuracy = test(test_dataloader, model, loss_fn, device)
 
-        if i % 20 == 0:
-            print(f"[Epoch {i}/{epochs}] Test Accuracy: {(100*accuracy):.1f}%, Avg loss: {loss:8f}")
+        if i % 20 == 0 or i == epochs-1:
+            print(f"[Epoch {i+1}/{epochs}] Train loss: {train_loss:8f}, Test Accuracy: {(100*accuracy):.1f}%, Test Avg loss: {loss:8f}")
 
     torch.save(model.state_dict(), model_dir)
     print(f"\nSaved weights to {model_dir}")

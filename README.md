@@ -45,13 +45,13 @@ python3 -m sim.run_sim_teleop
 
 Run success classifier:
 ```bash
-# Accuracy: 81.8%, Avg loss: ~0.48
+# Test Accuracy: 94.4%, Test Avg loss: 0.172887
 python3 models/train_classifier.py
 ```
 
 Run Eval on whole dataset after training:
 ```
-# Accuracy: 97.2%, Avg loss: 0.1189
+# Accuracy: 97.2%, Avg loss: 0.088487
 python3 models/eval_classifier.py
 ```
 

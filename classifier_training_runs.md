@@ -11,3 +11,9 @@ Test Error:
 3) run for epochs = 500, training:test = 5:5
 Test Error: 
  Accuracy: 96.3%, Avg loss: 0.142616 
+
+4) run for epochs = 100, training:test = 5:5
+    [Epoch 100/100] Train loss: 0.005320, Test Accuracy: 94.4%, Test Avg loss: 0.172887
+
+    Test Error:
+        Accuracy: 97.2%, Avg loss: 0.088487
