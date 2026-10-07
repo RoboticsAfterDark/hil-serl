@@ -15,5 +15,8 @@ Test Error:
 4) run for epochs = 100, training:test = 5:5
     [Epoch 100/100] Train loss: 0.005320, Test Accuracy: 94.4%, Test Avg loss: 0.172887
 
-    Test Error:
-        Accuracy: 97.2%, Avg loss: 0.088487
+    Evaluation Accuracy: 97.2%, Evaluation loss: 0.088480
+    Confusion matrix (rows: actual, columns: predicted):
+                    failure     success
+        failure          89           0
+        success           3          16

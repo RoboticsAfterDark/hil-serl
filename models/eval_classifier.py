@@ -7,6 +7,24 @@ from pathlib import Path
 import torch
 
     
+def print_confusion_matrix(confusion_matrix: torch.Tensor) -> None:
+    """
+    Print a labeled confusion matrix for failure and success predictions.
+
+    Args:
+        confusion_matrix: Matrix with actual labels as rows and predicted
+            labels as columns, using failure=0 and success=1.
+    """
+    class_names = ("failure", "success")
+    print("Confusion matrix (rows: actual, columns: predicted):")
+    print(f"{'':>12}{class_names[0]:>12}{class_names[1]:>12}")
+    for class_index, class_name in enumerate(class_names):
+        values = confusion_matrix[class_index]
+        print(
+            f"{class_name:>12}{int(values[0]):>12}{int(values[1]):>12}"
+        )
+
+
 if __name__ == "__main__":
     ####################################### HYPERPARAMETERS ########################################
     BATCH_SIZE = 10
@@ -24,8 +42,10 @@ if __name__ == "__main__":
 
     _, test_dataloader = load_data(data_dir, BATCH_SIZE, 0)  # All test data
     
-    loss, accuracy = test(test_dataloader, model, loss_fn, device)
+    loss, accuracy, confusion_matrix = test(test_dataloader, model, loss_fn, device)
 
     # TODO (@schromya): For evaluating generalization, this should really be tested on 
     # untrained data
-    print(f"Test Error: \n Accuracy: {(100*accuracy):>0.1f}%, Avg loss: {loss:>8f} \n")
+    print(f"Evaluation Accuracy: {(100*accuracy):>0.1f}%, Evaluation loss: {loss:>8f}")
+
+    print_confusion_matrix(confusion_matrix)

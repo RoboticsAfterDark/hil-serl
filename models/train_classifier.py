@@ -88,7 +88,7 @@ def train(dataloader, model, loss_fn, optimizer, device) -> float:
         loss, _ = loss.item(), min((batch + 1) * dataloader.batch_size, size)
     return loss
 
-def test(dataloader, model, loss_fn, device) -> tuple[float, float]:
+def test(dataloader, model, loss_fn, device) -> tuple[float, float, torch.Tensor]:
     """
     Evaluate the model on one complete pass through the test dataset.
 
@@ -99,24 +99,32 @@ def test(dataloader, model, loss_fn, device) -> tuple[float, float]:
         device: Device where input tensors and the model are stored.
 
     Returns:
-        A tuple of average (loss, accuracy), both as values from 0 to 1.
+    A tuple containing:
+        - average test loss as a float.
+        - accuracy as a float from 0 to 1.
+        - a 2x2 confusion matrix with actual labels as rows and predicted labels as columns, 
+          using failure=0 and success=1.
     """
     size = len(dataloader.dataset)
     model.eval()
     test_loss, correct = 0, 0
+    confusion_matrix = torch.zeros((2, 2), dtype=torch.int64)
     with torch.no_grad():
         for X, y in dataloader:
             X = X.to(device)
             y = y.to(device).float().reshape(-1, 1)
+            labels = y.to(device).long().reshape(-1)
             pred = model(X)
             test_loss += loss_fn(pred, y).item() * X.size(0)
-            predicted_labels = pred >= 0
-            correct += (predicted_labels == y.bool()).sum().item()
+            predicted_labels = (pred.reshape(-1) >= 0)
+            correct += (predicted_labels == labels.bool()).sum().item()
+            for actual, predicted in zip(labels.cpu(), predicted_labels.cpu()):
+                confusion_matrix[int(actual.item()), int(predicted.item())] += 1
 
     test_loss /= size
     correct /= size
 
-    return test_loss, correct
+    return test_loss, correct, confusion_matrix
 
 
 if __name__ == "__main__":
@@ -143,7 +151,7 @@ if __name__ == "__main__":
 
     for i in range(EPOCHS):
         train_loss = train(train_dataloader, model, loss_fn, optimizer, device)
-        loss, accuracy = test(test_dataloader, model, loss_fn, device)
+        loss, accuracy, _ = test(test_dataloader, model, loss_fn, device)
 
         if i % 20 == 0 or i == EPOCHS-1:
             print(f"[Epoch {i+1}/{EPOCHS}] Train loss: {train_loss:8f}, Test Accuracy: {(100*accuracy):.1f}%, Test Avg loss: {loss:8f}")
