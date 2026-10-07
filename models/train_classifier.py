@@ -10,12 +10,13 @@ from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
 
 
-def load_data(data_dir, batch_size=10):
+def load_data(data_dir, batch_size=10, train_ratio=0.5):
     """
     Load labeled images and create a reproducible 80/20 train/test split.
     Args:
         data_dir: Directory containing failure/ and success/ image folders.
         batch_size: Number of images in each batch.
+        train_ratio: Ratio of data for the training split, from 0 to 1.
     Returns:
         Training and test DataLoaders with images resized to 224 x 224.
     """
@@ -34,10 +35,10 @@ def load_data(data_dir, batch_size=10):
         raise ValueError("Expected only failure/ and success/ folders in the dataset.")
     if len(dataset) < 2:
         raise ValueError("Need at least two images for a train/test split.")
+    if not 0 <= train_ratio <= 1:
+        raise ValueError("train_ratio must be between 0 and 1.")
 
-    # When using small dataset (datapoint = 100) split evenly would be better as to small
-    # testset or trainset might not be the good representative of the dataset
-    train_size = int(0.5 * len(dataset))
+    train_size = int(train_ratio * len(dataset))
     test_size = len(dataset) - train_size
 
     training_data, test_data = random_split(
@@ -47,10 +48,10 @@ def load_data(data_dir, batch_size=10):
     )
 
     train_dataloader = DataLoader(
-        training_data, batch_size=batch_size, shuffle=True
+        training_data, batch_size=batch_size, shuffle=len(training_data) > 0
     )
     test_dataloader = DataLoader(
-        test_data, batch_size=batch_size, shuffle=False
+        test_data, batch_size=batch_size, shuffle=len(test_data) > 0
     )
     return train_dataloader, test_dataloader
 
@@ -119,6 +120,13 @@ def test(dataloader, model, loss_fn, device) -> tuple[float, float]:
 
 
 if __name__ == "__main__":
+
+    ####################################### HYPERPARAMETERS ########################################
+    BATCH_SIZE = 10
+    EPOCHS = 100
+    TRAIN_RATIO = 0.5  # Even split for smaller datasets (100) for better representation of data
+    ################################################################################################
+    
     batch_size = 10
     device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
 
@@ -126,19 +134,19 @@ if __name__ == "__main__":
     model_dir = Path(__file__).resolve().parents[1] / "models" / "classifier" / "binary_classifier.pth"
     model_dir.parent.mkdir(parents=True, exist_ok=True)
 
-    train_dataloader, test_dataloader = load_data(data_dir, batch_size)
+    train_dataloader, test_dataloader = load_data(data_dir, BATCH_SIZE, TRAIN_RATIO)
 
     model = BinaryClassifier().to(device)
     loss_fn = torch.nn.BCEWithLogitsLoss()
     optimizer = torch.optim.Adam(model.head.parameters(), lr=1e-4)
 
-    epochs = 100
-    for i in range(epochs):
+
+    for i in range(EPOCHS):
         train_loss = train(train_dataloader, model, loss_fn, optimizer, device)
         loss, accuracy = test(test_dataloader, model, loss_fn, device)
 
-        if i % 20 == 0 or i == epochs-1:
-            print(f"[Epoch {i+1}/{epochs}] Train loss: {train_loss:8f}, Test Accuracy: {(100*accuracy):.1f}%, Test Avg loss: {loss:8f}")
+        if i % 20 == 0 or i == EPOCHS-1:
+            print(f"[Epoch {i+1}/{EPOCHS}] Train loss: {train_loss:8f}, Test Accuracy: {(100*accuracy):.1f}%, Test Avg loss: {loss:8f}")
 
     torch.save(model.state_dict(), model_dir)
     print(f"\nSaved weights to {model_dir}")
