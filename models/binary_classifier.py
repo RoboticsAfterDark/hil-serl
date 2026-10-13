@@ -8,8 +8,8 @@ class BinaryClassifier(nn.Module):
     def __init__(self):
         super().__init__()
 
-        # TODO (@schromya): hil-serl uses a resnet-10 with learned pooling. May need to change.
-
+        # hil-serl uses a resnet-10 with learned pooling. However, this seems to be performing
+        # well enough while using built-in frozen weights
         weights = ResNet18_Weights.DEFAULT
         self.backbone = resnet18(weights=weights)  # Pretrained weights
         self.backbone.requires_grad_(False)        # Freeze weights

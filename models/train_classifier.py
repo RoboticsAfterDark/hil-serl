@@ -21,10 +21,6 @@ def load_data(data_dir, batch_size=10, train_ratio=0.5):
         Training and test DataLoaders with images resized to 224 x 224.
     """
 
-    # TODO (schromya): Crop image to 224x224 to begin with?
-    # NOTTODO(abhismirai42): Croping image is distroying the information, resize is better right?
-    #                        Also we need to make sure that same croping/resizing applied while eval
-    # (schromya): I meant cropping smaller in data processing (data/prep_classifier_data)
     preprocess = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
