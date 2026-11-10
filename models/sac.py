@@ -6,6 +6,10 @@ https://github.com/ikostrikov/rlpd/blob/main/rlpd/agents/sac/sac_learner.py
 https://github.com/rail-berkeley/hil-serl/blob/main/serl_launcher/serl_launcher/agents/continuous/sac.py
 """
 
+from dataclasses import dataclass
+from collections import deque
+import random
+
 import torch
 from torch import nn
 
@@ -102,23 +106,98 @@ class ActorLoss(nn.Module):
 
 
 class SACAgent():
-    def __init__(self):
 
-        LEARNING_RATE = 3e-4
-        BATCH_SIZE = 256
+    @dataclass
+    class Transition:
+        state: torch.Tensor
+        action: torch.Tensor
+        next_state: torch.Tensor
+        reward: float
+        done: int  # 0 or 1
 
-        self.actor = ActorNetwork()
-        self.q1 = QNetwork()
-        self.q2 = QNetwork()
-        self.q1_target = QNetwork()
-        self.q2_target = QNetwork()
+    def __init__(self, state_dim:int, action_dim:int, policy_updates_per_env_step:int=1,
+                 replay_buffer_size:int=10e6, batch_size:int=256, learning_rate:int=3e-4,
+                 discount_factor:float=0.99):
 
-        self.actor_optimizer = torch.optim.adam(self.actor.parameters(), lr=LEARNING_RATE)
-        self.q1_optimizer = torch.optim.adam(self.q1.parameters(), lr=LEARNING_RATE)
-        self.q2_optimizer = torch.optim.adam(self.q2.parameters(), lr=LEARNING_RATE)
+        self.actor = ActorNetwork(state_dim, action_dim)
+
+        self.q1 = QNetwork(state_dim, action_dim)
+        self.q2 = QNetwork(state_dim, action_dim)
+
+        self.q1_target = QNetwork(state_dim, action_dim)
+        self.q2_target = QNetwork(state_dim, action_dim)
+        # Set target weights equal to Q
+        self.q1_target.load_state_dict(self.q1.state_dict())
+        self.q2_target.load_state_dict(self.q2.state_dict())
+        # Freeze target networks bc they are not optimized directly
+        self.q1_target.requires_grad_(False)
+        self.q2_target.requires_grad_(False)
+
+        self.actor_optimizer = torch.optim.adam(self.actor.parameters(), lr=learning_rate)
+        self.q1_optimizer = torch.optim.adam(self.q1.parameters(), lr=learning_rate)
+        self.q2_optimizer = torch.optim.adam(self.q2.parameters(), lr=learning_rate)
+
+        # D: stores state transitions Transition {s,a,s',r,d}
+        self.replay_buffer = deque(maxlen=replay_buffer_size)
+
+        self.policy_updates_per_env_step = policy_updates_per_env_step
+
+        self.batch_size = batch_size
+
+        self.discount_factor = discount_factor
+
+    def select_action(self, state:torch.Tensor):
+
+        # Add in batches (batch_size, state_dim)
+        state_tensor = state_tensor.unsqueeze(0)
+        with torch.no_grad():
+            # Reparameterization trick
+            mean, log_std = self.actor(state)
+            noise = torch.randn_like(mean)
+            action = torch.tanh(mean + log_std * noise)
+
+        return action.squeeze()  # Remove batch
+
+    def update_policy(self, state:torch.Tensor, action:torch.Tensor, next_state:torch.Tensor, 
+                      reward:float, done:int):
+        """
+        Update the gradients of the policy based on the original state, taken action, 
+        and result.
+
+        Args:
+            state: s
+            action: a
+            next_state: s'
+            reward: r
+            done: d
+        """
+
+        # Add transition information to replay buffer
+        transition = self.Transition(
+            state=state,
+            action=action,
+            next_state=next_state,
+            reward=reward,
+            done=done,
+        )
+        self.replay_buffer.append(transition)
 
 
-    def step():
+        for _ in range(self.policy_updates_per_env_step):
+
+            # Randomly sample a batch of transitions
+            batch = random.sample(list(self.replay_buffer), self.batch_size)
+
+            # Compute target for Q function
+            # target = reward + (1 - self.discount_factor)
+
+            # Update Q function gradients
+
+            # Update policy gradient
+
+            # Update target networks
+
+
         return
 
 
